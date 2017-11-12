@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*- 
 # @File Name: algorithms.py
 # @Created:   2017-11-08 21:24:09  seo (simon.seo@nyu.edu) 
-# @Updated:   2017-11-12 03:58:25  Simon Seo (simon.seo@nyu.edu)
+# @Updated:   2017-11-12 05:10:33  Simon Seo (simon.seo@nyu.edu)
 from banker import DEBUG
 
 class FIFO():
@@ -17,13 +17,14 @@ class FIFO():
 			return
 
 		blockedTasks = tm.getTaskByState('blocked')
+		blockedTasks.sort(key=lambda task: task.blockedCycle)
 		for task in blockedTasks:
-			if DEBUG: print('Taking care of blocked tasks')
+			if DEBUG: print('Taking care of blocked task {}'.format(task.id))
 			act = task.getActivity()
-			assert(act.name == 'request')
+			assert(act.name == 'request'), 'blocked task\'s next act is {}'.format(act.name)
 			if tm.canAlloc(act.resourceId, act.requested):
 				tm.alloc(task, act.resourceId, act.requested)
-				task.run()
+				task.unstart()
 			else:
 				task.block(act)
 
@@ -42,24 +43,27 @@ class FIFO():
 						tm.alloc(task, act.resourceId, act.requested)
 						task.run()
 					else:
+						if DEBUG: print('Request for {} of resource {} cannot be granted at cycle {}'.format(act.requested, act.resourceId, task.currCycle))
 						task.block(act)
 				elif act.name == 'compute':
 					task.compute(act.computeCycleLength)
 				elif act.name == 'release':
 					releaseQueue.append([task, act.resourceId, act.released]) #release at the end of cycle
 					task.run()
-				elif act.name == 'terminate':
+				if task.nextActivity() == 'terminate':
 					task.terminate()
 		for args in releaseQueue:
 			tm.release(*args)
 
 		unstartedTasks = tm.getTaskByState('unstarted')
 		for task in unstartedTasks:
-			while task.nextActivity() == 'initiate':
+			if task.nextActivity() == 'initiate':
 				act = task.getActivity()
 				assert(act.name == 'initiate')
 				task.setClaim(act.resourceId, act.claim)
 			task.run()
+			if task.nextActivity() == 'initiate':
+				task.unstart()
 
 		while tm.isDeadlocked():
 			sacrifice = tm.getTaskByState('blocked')[0]

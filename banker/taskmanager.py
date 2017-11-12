@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*- 
 # @File Name: taskmanager.py
 # @Created:   2017-11-08 22:01:56  seo (simon.seo@nyu.edu) 
-# @Updated:   2017-11-12 03:57:58  Simon Seo (simon.seo@nyu.edu)
+# @Updated:   2017-11-12 05:12:31  Simon Seo (simon.seo@nyu.edu)
 import os
 import banker.algorithms as algorithms
 from banker import DEBUG
@@ -78,6 +78,7 @@ class TaskManager(list):
 			if DEBUG: print('Released all resources from task {} at cycle {}'.format(task.id, task.currCycle))
 
 	def isDeadlocked(self):
+		if DEBUG: print('Looking for deadlock')
 		blockedTasks = self.getTaskByState('blocked')
 		runningTasks = self.getTaskByState('running')
 		if len(blockedTasks) == 0 or len(runningTasks) > 0:
@@ -85,10 +86,11 @@ class TaskManager(list):
 		for task in blockedTasks:
 			act = task.getActivity()
 			assert(act.name == 'request')
+			task.block(act, deadlockChecking=True)
 			if self.canAlloc(act.resourceId, act.requested):
 				return False
 			else:
-				task.block(act)
+				pass
 		if DEBUG: print('Deadlock found at cycle {}'.format(task.currCycle))
 		return True
 
@@ -119,11 +121,13 @@ class TaskManager(list):
 		totalCycle = 0
 		totalWaiting = 0
 		for task in self:
-			print('Task {}: {}'.format(task.id, task.state if task.state == 'aborted' else \
-				'{}   {}   {}%'.format(task.currCycle, task.waitingTime, round(task.waitingTime / task.currCycle * 100))))
-			totalCycle += task.currCycle
-			totalWaiting += task.waitingTime
-		print('Total: {}   {}.  {}%'.format(totalCycle, totalWaiting, round(totalWaiting / totalCycle * 100)))
+			if task.state == 'aborted':
+				print('Task {}: {}'.format(task.id, task.state))
+			else:
+				print('Task {}: {}   {}   {}%'.format(task.id, task.currCycle, task.waitingTime, round(task.waitingTime / task.currCycle * 100)))
+				totalCycle += task.currCycle
+				totalWaiting += task.waitingTime
+		print('Total: {}   {}   {}%'.format(totalCycle, totalWaiting, round(totalWaiting / totalCycle * 100)))
 
 class Task():
 	"""model for a task. holds information about state of task and activities it will process"""
@@ -133,6 +137,7 @@ class Task():
 		self.waitingTime = 0 #keeps track of how long task waited
 		self.currCycle = 0 #keeps track of how long task ran
 		self.compCycle = 0 #keeps track of how many computing cycles are left
+		self.blockedCycle = -1 #when was the task blocked
 
 		self.claims = [0] * args[-1] #list of claims that task has for each resource
 		self.holds = [0] * args[-1] #list of resources that task currently holds
@@ -143,13 +148,16 @@ class Task():
 
 	def getActivity(self):
 		'''returns the next activity in queue'''
-		return self.activityList.pop(0)
+		act = self.activityList.pop(0)
+		if DEBUG: print('popping activity {}: {}'.format(act.name, [el.name for el in self.activityList]))
+		return act
 
 	def nextActivity(self):
 		assert(len(self.activityList) > 0)
 		return self.activityList[0].name
 
 	def _tick(self):
+		if DEBUG: print('ticking for task {}'.format(self.id))
 		self.currCycle += 1
 
 	def _wait(self):
@@ -158,13 +166,21 @@ class Task():
 
 	def run(self):
 		self.state = 'running'
+		self.blockedCycle = -1
 		self._tick()
 
-	def block(self, activity=None):
+	def unstart(self):
+		self.state = 'unstarted'
+
+	def block(self, activity=None, deadlockChecking=False):
 		if activity is not None:
 			self.activityList.insert(0, activity)
-		self.state = 'blocked'
-		self._wait()
+			if DEBUG: print('reinserting activity {}: {}'.format(activity.name, [el.name for el in self.activityList]))
+		if not deadlockChecking:
+			self.state = 'blocked'
+			if self.blockedCycle < 0:
+				self.blockedCycle = self.currCycle
+			self._wait()
 
 	def terminate(self):
 		self.state = 'terminated'
@@ -174,7 +190,7 @@ class Task():
 		self.state = 'aborted'
 
 	def compute(self, computeCycleLength=None):
-		if computeCycle is not None:
+		if computeCycleLength is not None:
 			self.compCycle = computeCycleLength
 		self.compCycle -= 1
 		self._tick()

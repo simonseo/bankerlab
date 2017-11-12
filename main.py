@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*- 
 # @File Name: main.py
 # @Created:   2017-11-08 20:52:00  seo (simon.seo@nyu.edu) 
-# @Updated:   2017-11-12 03:58:36  Simon Seo (simon.seo@nyu.edu)
+# @Updated:   2017-11-12 04:43:25  Simon Seo (simon.seo@nyu.edu)
 
 import banker
 from banker import DEBUG
