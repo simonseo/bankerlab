@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*- 
 # @File Name: taskmanager.py
 # @Created:   2017-11-08 22:01:56  seo (simon.seo@nyu.edu) 
-# @Updated:   2017-11-12 21:59:56  Simon Seo (simon.seo@nyu.edu)
+# @Updated:   2017-11-12 22:45:05  Simon Seo (simon.seo@nyu.edu)
 import os
 import banker.algorithms as algorithms
 from banker import DEBUG
@@ -139,12 +139,12 @@ class TaskManager(list):
 		totalWaiting = 0
 		for task in self:
 			if task.state == 'aborted':
-				print('Task {}: {}'.format(task.id, task.state))
+				print('Task {}:\t{}'.format(task.id, task.state))
 			else:
-				print('Task {}: {}   {}   {}%'.format(task.id, task.currCycle, task.waitingTime, round(task.waitingTime / task.currCycle * 100)))
+				print('Task {}:\t{}\t{}\t{}%'.format(task.id, task.currCycle, task.waitingTime, round(task.waitingTime / task.currCycle * 100)))
 				totalCycle += task.currCycle
 				totalWaiting += task.waitingTime
-		print('Total: {}   {}   {}%'.format(totalCycle, totalWaiting, round(totalWaiting / totalCycle * 100)))
+		print('Total:\t{}\t{}\t{}%'.format(totalCycle, totalWaiting, round(totalWaiting / totalCycle * 100)))
 
 class Task():
 	"""model for a task. holds information about state of task and activities it will process"""

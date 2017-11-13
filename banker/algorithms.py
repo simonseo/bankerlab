@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*- 
 # @File Name: algorithms.py
 # @Created:   2017-11-08 21:24:09  seo (simon.seo@nyu.edu) 
-# @Updated:   2017-11-12 22:23:56  Simon Seo (simon.seo@nyu.edu)
+# @Updated:   2017-11-12 22:38:09  Simon Seo (simon.seo@nyu.edu)
 from banker import DEBUG
 
 class FIFO():
@@ -149,7 +149,6 @@ class Banker():
 					task.setClaim(act.resourceId, act.claim)
 				else:
 					print('Banker aborts task {} before run begins:\n\tclaim for resource {} ({}) exceeds number of units present ({})'.format(task.id, act.resourceId, act.claim, tm.res(act.resourceId)))
-					print('In banker\'s algorithm, task {} claimed more than the total resources. Aborting.'.format(task.id))
 					task.abort()
 					continue
 			task.run()
