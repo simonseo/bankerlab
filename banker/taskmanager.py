@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*- 
 # @File Name: taskmanager.py
 # @Created:   2017-11-08 22:01:56  seo (simon.seo@nyu.edu) 
-# @Updated:   2017-11-12 07:13:34  Simon Seo (simon.seo@nyu.edu)
+# @Updated:   2017-11-12 21:59:56  Simon Seo (simon.seo@nyu.edu)
 import os
 import banker.algorithms as algorithms
 from banker import DEBUG
@@ -103,10 +103,11 @@ class TaskManager(list):
 		if DEBUG: print('Deadlock found at cycle {}'.format(task.currCycle))
 		return True
 
-	def isSafe(self, task, resourceId, count):
-		'''checks if resource state is safe: no potential requests are greater than current resource'''
+	def isSafe(self, task):
+		'''checks if resource state is safe: no potential requests (claim - hold)
+		 are greater than current resource'''
 		for i in range(1, self.R+1):
-			if task.getClaim(i) + task.res(i) > self.res(i):
+			if task.getClaim(i) - task.res(i) > self.res(i):
 				return False
 		return True
 
@@ -181,6 +182,7 @@ class Task():
 
 	def _wait(self):
 		'''count up waiting time and total time'''
+		if DEBUG: print('task {} is waiting'.format(self.id))
 		self.waitingTime += 1
 		self._tick()
 
@@ -235,7 +237,7 @@ class Task():
 	def res(self, resourceId, count=-1):
 		'''get AND set function for resources that a task holds'''
 		if count >= 0:
-			if self.res(resourceId) + count <= self.getClaim(resourceId):
+			if count <= self.getClaim(resourceId):
 				self.holds[resourceId - 1] = count
 			else:
 				if DEBUG: print('Cannot allocate {} of {} because the claim is {}'.format(count, resourceId, self.getClaim(resourceId)))
