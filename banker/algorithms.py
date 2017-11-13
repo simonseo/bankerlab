@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*- 
 # @File Name: algorithms.py
 # @Created:   2017-11-08 21:24:09  seo (simon.seo@nyu.edu) 
-# @Updated:   2017-11-12 22:38:09  Simon Seo (simon.seo@nyu.edu)
+# @Updated:   2017-11-12 22:57:47  Simon Seo (simon.seo@nyu.edu)
 from banker import DEBUG
 
 class FIFO():
@@ -81,8 +81,6 @@ class FIFO():
 
 		self.run(tm)
 
-
-
 class Banker():
 	"""Simulates the banker algorithm resource manager"""
 	def __init__(self, *args):
@@ -94,53 +92,62 @@ class Banker():
 			tm.printSummary()
 			return
 
+		# go through blocked tasks: allocate if previously rejected request is safe,
+		# else keep blocking
 		blockedTasks = tm.getTaskByState('blocked')
-		blockedTasks.sort(key=lambda task: task.blockedCycle)
+		blockedTasks.sort(key=lambda task: task.blockedCycle) # sort by time they were blocked
 		for task in blockedTasks:
 			if DEBUG: print('Taking care of blocked task {}'.format(task.id))
 			act = task.getActivity()
 			assert(act.name == 'request'), 'blocked task\'s next act is {}'.format(act.name)
 			if tm.isSafe(task):
+				# Check if it is safe before allocating resources
 				tm.alloc(task, act.resourceId, act.requested)
 				task.unstart()
 			else:
+				# if unsafe, block
 				task.block(act)
 
+		# for tasks that are running, if they're computing, leave them be
+		# else process their activities
 		runningTasks = tm.getTaskByState('running')
 		releaseQueue = []
 		for task in runningTasks:
 			if DEBUG: print('Taking care of running tasks')
 			if task.isComputing():
 				task.compute()
-			else:
-				act = task.getActivity()
-				assert(act.name in 'request compute release terminate'.split())
+				continue
 
-				if act.name == 'request':
+			act = task.getActivity()
+			assert(act.name in 'request compute release terminate'.split())
+
+			if act.name == 'request':
+				if task.getClaim(act.resourceId) < task.res(act.resourceId) + act.requested:
 					# abort if hold + request > claim
-					if task.getClaim(act.resourceId) < task.res(act.resourceId) + act.requested:
-						print('During cycle {}-{} of Banker\'s algorithms\n\tTask {}\'s request exceeds its claim; aborted;'.format(task.currCycle, task.currCycle + 1, task.id))
-						task.abort()
-						tm.release(task)
-					# allocate resources if safe
-					elif tm.isSafe(task):
-						tm.alloc(task, act.resourceId, act.requested)
-						task.run()
-					# block if unsafe
-					else:
-						if DEBUG: print('Request for {} of resource {} cannot be granted at cycle {}'.format(act.requested, act.resourceId, task.currCycle))
-						task.block(act)
-				elif act.name == 'compute':
-					task.compute(act.computeCycleLength)
-				elif act.name == 'release':
-					releaseQueue.append([task, act.resourceId, act.released]) #release at the end of cycle
+					print('During cycle {}-{} of Banker\'s algorithms\n\tTask {}\'s request exceeds its claim; aborted;'.format(task.currCycle, task.currCycle + 1, task.id))
+					task.abort()
+					tm.release(task)
+				elif tm.isSafe(task):
+					# allocate resources only if it is safe
+					tm.alloc(task, act.resourceId, act.requested)
 					task.run()
-				elif act.name == 'terminate':
-					task.terminate()
+				else:
+					# block if unsafe
+					if DEBUG: print('Request for {} of resource {} cannot be granted at cycle {}'.format(act.requested, act.resourceId, task.currCycle))
+					task.block(act)
+			elif act.name == 'compute':
+				task.compute(act.computeCycleLength)
+			elif act.name == 'release':
+				# release and make resources available at the end of cycle
+				releaseQueue.append([task, act.resourceId, act.released]) 
+				task.run()
+			elif act.name == 'terminate':
+				task.terminate()
 		for args in releaseQueue:
 			tm.release(*args)
 
-		unstartedTasks = tm.getTaskByState('unstarted') #all uninitiated or unblocked tasks
+		#all uninitiated or unblocked tasks
+		unstartedTasks = tm.getTaskByState('unstarted')
 		for task in unstartedTasks:
 			if task.nextActivity() == 'initiate':
 				act = task.getActivity()

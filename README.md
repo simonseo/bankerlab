@@ -1,3 +1,5 @@
+# Bankerlab
+
 This is a simulation of resource management algorithms FIFO and Banker's Algorithm written in Python 3.
 
 To run the program in terminal use the following command:
